@@ -1,0 +1,120 @@
+---
+title: "HW01"
+author: "Jackson Dial"
+date: '2022-09-07'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Complete a Tutorial for "dplyr"
+
+```{r}
+# install.packages("tidyverse")
+# install.packages("devtools")
+```
+
+```{r}
+library(tidyverse)
+# library(devtools)
+# devtools::install_github("tidyverse/dplyr")
+```
+
+```{r}
+starwars %>% 
+  filter(species == "Droid")
+```
+
+```{r}
+starwars %>% 
+  select(name, ends_with("color"))
+```
+
+```{r}
+starwars %>% 
+  mutate(name, bmi = mass / ((height / 100)  ^ 2)) %>%
+  select(name:mass, bmi)
+```
+
+```{r}
+starwars %>% 
+  arrange(desc(mass))
+```
+
+```{r}
+starwars %>%
+  group_by(species) %>%
+  summarise(
+    n = n(),
+    mass = mean(mass, na.rm = TRUE)
+  ) %>%
+  filter(
+    n > 1,
+    mass > 50
+  )
+```
+
+# Dataset Summary and Plotting
+
+### Read the dataset into R by using a code chunk in your Rmd file.
+
+```{r}
+# setwd("C:/Users/jacks/OneDrive/Desktop/DUKE_FALL2022/707/BIOSTAT707")
+dat <- read_csv("Data/heart_failure.csv")
+```
+
+### Use the summary function to show the summary statistics for the dataset. Print the summary. How many rows are there in this dataframe?
+
+```{r}
+library(pander)
+summary(dat) %>% 
+  pander()
+
+nrow(dat) #there are 299 rows in this df
+```
+
+### How many people have anaemia? (Hint: Use functions in the dplyr package to help you get to this number)
+
+```{r}
+table(dat$anaemia)
+dat %>% 
+  filter(anaemia == 1) %>% 
+  nrow()
+
+#129 people have anaemia
+```
+
+### How many death events occur in people who smoke?
+
+```{r}
+dat %>% 
+  filter(smoking == 1,
+         DEATH_EVENT == 1) %>% 
+  nrow()
+
+# There are 30 death events in people who smoke
+```
+
+### Plot a histogram of the number of deaths for each diabetes group using ggplot2. You may have to install the package using the function install.packages(“ggplot2”) and read through the ggplot tutorial to learn how to use ggplot2 commands. [Hint: remember that a death event is not continuous and should be designated as a Factor data type in R]
+
+```{r}
+ggplot(dat, aes(x = as.factor(diabetes), y = DEATH_EVENT))+
+  geom_bar(stat = "identity")+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank())+
+  labs(x = "Diabetes? (0 = No, 1 = Yes)",
+       y = "Number of Death Events")
+```
+
+
+
+
+
+
+
+
+
