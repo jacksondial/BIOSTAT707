@@ -92,13 +92,17 @@ ggplot(stroke_df, aes(x = bmi))+
        y = "Density",
        title = "Distribution of BMI Across Stroke Levels",
        subtitle = "0 = 'No Stroke', 1 = 'Stroke'")
+#I chose a to change the number of bins to 40 to better fit the
+#density distribution curve
   
 ```
 
 
 4. What are your observations? E.g. Does any feature visually show a strong difference in means or in shape of the data between the stroke groups? For each feature, which stroke group seems to have a higher average value? Clearly explain your answer to receive full credit. 
 
-The distribution of average glucose level across stroke groups does appear to differ. Though both plots show a bit of a bi-modal distribution, the stroke group = 1 group
+The distribution of average glucose level across stroke groups does appear to differ. Though both plots show a bit of a bi-modal distribution, the stroke = 1 group shows a more distinct bi-modal distribution. The stroke = 1 group appears to have a larger average value.
+
+The distribution of BMI across stroke levels is rather similar, though there is slightly more positive kurtosis in the stroke = 1 group. The stroke = 1 group appears to have a larger average value.
 
 ---
 
@@ -109,6 +113,20 @@ The distribution of average glucose level across stroke groups does appear to di
 work_type
 smoking_status
 
+```{r}
+ggplot(stroke_df, aes(y = work_type))+
+  geom_bar()+
+  facet_wrap(~smoking_status, nrow = 2)+
+  theme(panel.grid.minor = element_blank())+
+  labs(x = "Count",
+       y = "Type of Work",
+       title = "Count of Individuals Across Smoking and Work Statuses")
+
+# theme(axis.text.x = element_text(angle = 90))+
+
+```
+
+
 + When using facet_wrap(), you are encouraged to make 2 plots in one row. 
 + make sure to rotate the axis labels so that they are readable.
 
@@ -116,6 +134,17 @@ smoking_status
 6. Using ggplot, draw density function curves of *age* by stroke status on the same plot. What do you observe? Which stroke group has a higher mean age?
 
 + remember to make a title, clearly label the axes, and create a legend.
+
+```{r}
+ggplot(stroke_df, aes(x = age, fill = stroke))+
+  geom_density(alpha = .3)+
+  theme(panel.grid.minor = element_blank())+
+  labs(x = "Age",
+       y = "Density",
+       title = "Distribution of Age Across Stroke",
+       subtitle = "0 = 'No Stroke', 1 = 'Stroke'")
+```
+
 
 
 7. Answer the following questions:
@@ -132,21 +161,27 @@ smoking_status
 
 ```{r}
 library(sjstats)
+library(pander)
+
 stroke_df %>%
   filter(stroke == 1) %>% 
-  summarise(avg_age = mean(age))
+  summarise(avg_age = mean(age)) %>% 
+  pander()
 
 stroke_df %>%
   filter(stroke == 0) %>% 
-  summarise(avg_age = mean(age))
+  summarise(avg_age = mean(age)) %>% 
+  pander()
 
 stroke_df %>%
   filter(heart_disease == 1) %>% 
-  summarise(avg_bmi = mean(bmi))
+  summarise(avg_bmi = mean(bmi)) %>% 
+  pander()
 
 stroke_df %>%
   filter(heart_disease == 0) %>% 
-  summarise(avg_bmi = mean(bmi))
+  summarise(avg_bmi = mean(bmi)) %>% 
+  pander()
 
 stroke_df %>% 
   filter(smoking_status == "never smoked") %>% 
@@ -161,15 +196,70 @@ stroke_df %>%
 
 8. Now, using a similar 1 by 2 grid, overlay two separate density curves for the two groups based on their heart disease status, for each variable *BMI* and *average glucose level*.  For these figures, plot just the density curve (without the density histogram bins). Add a vertical line for each of the two density curves on each plot at the mean value for that feature for each group (grouped by heart disease status). For example, in the first entry of the grid, which is row 1 and column 1 of the 1-by-2 grid, there should be two density plots drawn in two colors based on whether subjects represented on the curve had heart disease or not.
 
+```{r}
+library(patchwork)
+
+p1 <- ggplot(stroke_df, aes(x = bmi, fill = heart_disease))+
+  geom_density(alpha = .3)+
+  theme(panel.grid.minor = element_blank())+
+  labs(x = "BMI",
+       y = "Density",
+       title = "Distribution of BMI Across Heart Disease")+
+  theme(legend.position = "bottom",
+        plot.title = element_text(size = 10))
+p2 <- ggplot(stroke_df, aes(x = avg_glucose_level, fill = heart_disease))+
+  geom_density(alpha = .3)+
+  theme(panel.grid.minor = element_blank())+
+  labs(x = "Average Glucose Level",
+       y = "Density",
+       title = "Distribution of Mean Glucose Across Heart Disease")+
+  theme(legend.position = "bottom",
+        plot.title = element_text(size = 10))
+
+p1 + p2
+
+# library(gridExtra)
+# grid.arrange(p1,p2, nrow = 1, name = "test")
+```
+
 
 9. What are your observations from the previous plots? E.g. Do any of the features visually show a strong difference in means or in shape of the data distribution between the people who had heart disease and those who didn't? For each feature, which heart disease diagnosis group seems to have the higher average value? Clearly explain your answer to receive full credit.
 
 
+
+The approximate averages of BMI appear to be similar across heart disease groups, but the averages of glucose appear to be different across the heart disease groups.
+
+The average BMI appears to be higher in the heart disease = 1 group, because the peak of the blue curve is at a greater value than the red curve. 
+
+The average glucose level appears to be higher in the heart disease = 1 group, because the peak on the right is much larger in the blue group than the red group.
+
+
 10. Plot the histogram and density plots of the variable "avg_glucose_level", and answer the following questions:
 
+```{r}
+ggplot(stroke_df, aes(avg_glucose_level))+
+  geom_histogram(aes(y = ..density..), bins = 40)+
+  geom_density(col = "forestgreen", size = 2)+
+  labs(x = "Average Glucose Level",
+       y = "Density",
+       title = "Distribution of Average Glucose Level")+
+  theme(panel.grid.minor = element_blank())
+```
+
+
 a. Is the data skewed?
+__Yes, the data is skewed.__
 b. Does it have positive skewness or negative skewness? 
+__The data has positive skewness.__
 c. Compute the skewness using the definition from the lecture.
+```{r}
+n <- nrow(stroke_df)
+x_bar = mean(stroke_df$avg_glucose_level)
+gluc <- as.vector(stroke_df$avg_glucose_level)
+skew <- ((1 / n) * sum((gluc - x_bar)^3)  ) / ((1 / (n - 1)) * sum((gluc - x_bar)^2) )^ (3/2)
+skew
+```
+
 d. According to the criterion introduced in the lecture, is the dataset moderately skewed or highly skewed?
 
 
