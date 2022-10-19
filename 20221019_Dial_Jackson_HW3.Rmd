@@ -77,6 +77,14 @@ dat1 <- dat0 %>% remove_rownames() %>% column_to_rownames(var = "id")
 ```{r}
 #check if different imputaiton should be used
 dat1 %>% filter(is.na(dat1$fractal_dimension_mean) == TRUE) %>% select(diagnosis, fractal_dimension_mean)
+dat1 %>% filter(diagnosis == "M") %>% summarise(avg_fdm = mean(fractal_dimension_mean, na.rm = TRUE))
+dat1 %>% filter(diagnosis == "B") %>% summarise(avg_fdm = mean(fractal_dimension_mean, na.rm = TRUE))
+#since the two values are very similar it will not be necessary to use factor-level-wise mean imputation.
+```
+
+```{r}
+dat1$fractal_dimension_mean[is.na(dat1$fractal_dimension_mean)] <- mean(dat1$fractal_dimension_mean, na.rm = TRUE)
+sum(is.na(dat1))
 ```
 
 
