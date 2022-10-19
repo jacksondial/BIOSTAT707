@@ -3,6 +3,8 @@ title: "HW3"
 author: "Jackson Dial"
 date: '2022-10-19'
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -48,14 +50,14 @@ d. How many observations are there with a malignant diagnosis and how many are t
 nrow(dat0)
 ncol(dat0)
 sum(is.na(dat0))
-summary(dat0)
+summary(dat0) %>% pander()
 class(dat0$diagnosis)
 dat0$diagnosis <- as.factor(dat0$diagnosis)
 levels(dat0$diagnosis)
 table(dat0$diagnosis) %>% pander()
 
 ```
-There are 569 observations in this dataset, and 31 (32 columns - 1 response variable) independent variables. The 'fractal_dimension_mean' variable has 6 NA values, and is the only column with any missing values. There are 357 observations with benign diagnosis, and 212 with malignant diagnosis.
+There are 569 observations in this dataset, and 10 independent variables. The 'fractal_dimension_mean' variable has 6 NA values, and is the only column with any missing values. There are 357 observations with benign diagnosis, and 212 with malignant diagnosis.
 
 
 **For this question, please type your answers in full sentences outside of R chunks. Do not just show the output of running your code.**
@@ -90,19 +92,72 @@ sum(is.na(dat1))
 
 5. After imputation, use "ggplot" and "facet_wrap" to plot a 10 x 3 grid of histograms to explore the data shape and distribution of all the independent variables in this dataset. The dataset has 10 sets of independent variables, and each set consists of the mean, standard error and worst value of a particular cell measurement. For example, "area_se" is the standard error of area measurements from a particular patient in this study. Remember to select a reasonable number of bins when plotting and add legends and labels when appropriate. Adjust the size of the plot display so that you can see all the facets clearly when you knit. 
 
+```{r, fig.height = 30, fig.width = 10}
+ggplot(gather(dat1 %>% subset(select = -c(diagnosis))), aes(value)) + 
+    geom_histogram(bins = 10) + 
+    facet_wrap(~key, scales = 'free_x', nrow = 10)+
+  theme(axis.text.x = element_text(angle = 30),
+        panel.grid.minor = element_blank())+
+  labs(x = "Variable",
+       y = "Count",
+       title = "Histograms of All Independent Variable Sets")
+```
+
 
 6. If you observe the independent variable distributions closely, groups of variables that start with "area", "compactness" and "concavity" are consistently strongly skewed to the right. Apply log transform using formula $log(x+1)$ to these 9 variables. 
+
+```{r}
+
+# area_ <- dat1[grepl("area",colnames(dat1))] %>% colnames()
+# compactness_ <- dat1[grepl("compactness",colnames(dat1))] %>% colnames()
+# concavity_ <- dat1[grepl("concavity",colnames(dat1))] %>% colnames()
+# my_vars <- c(area_, compactness_, concavity_)
+
+# library(foreach)
+# i = 1
+# for (i in 1:length(my_vars)) {
+#   current_var <- col[i]
+#   dat1$current_val <- exp(dat1$current_val +1)
+#   i = i + 1
+# }
+
+dat2 <- dat1 %>% 
+  mutate(area_mean = log(area_mean + 1),
+         area_se = log(area_se + 1),
+         area_worst = log(area_worst + 1),
+         compactness_mean = log(compactness_mean + 1),
+         compactness_se = log(compactness_se + 1),
+         compactness_worst = log(compactness_worst + 1),
+         concavity_mean = log(concavity_mean + 1),
+         concavity_se = log(concavity_se +1),
+         concavity_worst = log(concavity_worst + 1))
+
+```
 
 
 7. The pre-processed dataset needs to be scaled before performing PCA. Can you give a brief explanation as to why that is the case? Standardize the dataset. Use summary() again to show that your dataset has been properly standardized by checking the means and range of values of the variables.
 
+```{r}
+diag_only <- dat2 %>% select(diagnosis)
+dat3 <- dat2 %>% subset(select = -c(diagnosis)) %>% mutate_all(~(scale(.) %>% as.vector)) %>% cbind(diag_only)
+summary(dat3) %>% pander()
+```
+
 
 ## PCA (25 points)
-
 8. Calculate the principal components using the function princomp() and print the summary of the results.
+
+```{r}
+pca_res <- princomp(dat3 %>% subset(select = -c(diagnosis)), scores = TRUE)
+pca_res
+```
 
 
 9.  Plot a scree plot using the screeplot() function.
+
+```{r}
+screeplot(pca_res, type = "lines")
+```
 
 
 10. Plot the following two plots and use patchwork/gridExtra to position the two plots side by side:
@@ -112,36 +167,143 @@ b. cumulative proportion of variance explained  by the number of principal compo
 Note: please remember to clearly label your plots with titles, axis labels and legends when appropriate.
 
 
+```{r}
+pca_variances <- (pca_res$sdev)^2
+pca_probs <- pca_variances / sum(pca_variances)
+proportion_df <- cbind.data.frame(pca_probs, "Component" = paste("Comp", 1:30))
+
+p1 <- ggplot(proportion_df, aes(x = as.factor(Component), y = pca_probs))+
+  geom_point()+
+  coord_flip()+
+  labs(y = "Proportion of Variance Explained",
+       x =  "Component",
+       title = "Proportions of Variance Explained by Component Number")+
+  theme(panel.grid.minor = element_blank())
+
+
+proportion_df$cum_sum <- cumsum(proportion_df$pca_probs)
+
+p2 <- ggplot(proportion_df, aes(y = cum_sum, x = 1:30))+
+  geom_line()+
+  labs(x = "Component Number",
+       y = "Cumulative Sum",
+       title = "Cumulative Sum of Variance Explanined by Component")+
+  theme(panel.grid.minor = element_blank())+
+  geom_hline(yintercept = c(.88, .95))
+
+p1 + p2
+```
+
+
 11. What proportions of variance are captured from the first, second and third principal components? How many principal components do you need to describe at least 88% and 95% of the variance, respectively?
+
+The first PC captures about 45% of the variance, the second captures about 19% additionally, and the third captures about 9.1%. To describe at least 88% of the variance, we need the first 6 components, and to describe 95% of the variance, we need the first 10.
 
 
 12. Which are the top 2 variables that contribute the most to the variance captured from PC1, PC2, and PC3 respectively? (hint: look at the loadings information)
 
+For component 1, concave points_mean and concavity_mean contribute most.
+For component 2, fractal_dimension_mean and fractal_dimension_se contribute most
+For component 3, texture_se and smoothness_se contribute most.
+
 
 13. Plot a biplot using the biplot() function.
+
+```{r}
+biplot(pca_res, main = "Biplot of PCA")
+```
 
 
 14. Plot a 3 x 1 grid of scatter plots, where each plot is a scatter plot between two of the first 3 principal components, with different colors for each diagnosis group. For example, in grid cell (1,1), you should plot a scatter plot where the x-axis is PC1 and the y-axis is PC2, where red observations correspond to malignant diagnosis and blue observations correspond to the benign diagnosis. Remember to adjust the plot display size so that you can see clearly. Add legends and labels when appropriate. 
 
+```{r, fig.width = 20, fig.height = 10}
+pca_scores <- pca_res$scores %>% as.data.frame() %>% cbind(diag_only)
+p1 <- ggplot(pca_scores, aes(x = Comp.1, y = Comp.2))+
+  geom_point(aes(color = as.factor(diagnosis)))+
+  labs(x = "Component 1",
+       y = "Component 2",
+       title = "Comp 1 vs. Comp 2",
+       color = "Diagnosis")+
+  scale_color_manual(values = c("dodgerblue", "red2"))
+
+p2 <- ggplot(pca_scores, aes(x = Comp.1, y = Comp.3))+
+  geom_point(aes(color = as.factor(diagnosis)))+
+  labs(x = "Component 1",
+       y = "Component 3",
+       title = "Comp 1 vs. Comp 3",
+       color = "Diagnosis")+
+    scale_color_manual(values = c("dodgerblue", "red2"))
+
+
+p3 <- ggplot(pca_scores, aes(x = Comp.2, y = Comp.3))+
+  geom_point(aes(color = as.factor(diagnosis)))+
+  labs(x = "Component 2",
+       y = "Component 3",
+       title = "Comp 2 vs. Comp 3",
+       color = "Diagnosis")+
+    scale_color_manual(values = c("dodgerblue", "red2"))
+
+
+p1+p2+p3
+```
 
 
 ## Hierarchical Clustering (15 points)
 
 15. Calculate a dissimilarity matrix using Euclidean distance. Compute hierarchical clustering using the complete linkage method and plot the dendrogram. Use the rect.hclust() function to display dividing the dendrogram into 4 branches. 
 
+```{r}
+distance_mat <- dist(dat3, method = 'euclidean')
+
+Hierar_cl <- hclust(distance_mat, method = "complete")
+plot(Hierar_cl)
+
+hclust_obj <- rect.hclust(Hierar_cl, k = 4)
+```
+
 
 16. Divide the dendrogram into 4 clusters using cutree() function. Then use the table() function and the diagnosis label to compare the diagnostic composition (benign vs. malignant) of each of the 4 clusters. If you had to choose diagnostic labels for each of the clusters, how would you label each(e.g. cluster 1 is benign or malignant, cluster 2 is …, etc.)?
 
+```{r}
+cut_tree <- cutree(Hierar_cl, k = 4)
+table(cut_tree, diag_only$diagnosis)
+```
 
-17. Now try 5 clusters with and plot dendrograms for hierarchical clustering using Ward’s linkage. Then use the table() function to view the clustering result. As in the previous question, how would you label each of these 5 clusters? 
+Cluster 1 should be Malignant, cluster 2 should be malignant, cluster 3 should be benign, and cluster 4 should be malignant.
 
+17. Now try 5 clusters with and plot dendrograms for hierarchical clustering using Ward’s linkage. Then use the table() function to view the clustering result. As in the previous question, how would you label each of these 5 clusters?
+
+```{r}
+Hierar_cl2 <- hclust(distance_mat, method = "ward.D")
+plot(Hierar_cl2)
+
+hclust_obj2 <- rect.hclust(Hierar_cl2, k = 5)
+
+cut_tree2 <- cutree(Hierar_cl2, k = 5)
+table(cut_tree2, diag_only$diagnosis)
+```
+
+Cluster 1 should be malignant, cluster 2 should be malignant, cluster 3 should be benign, cluster 4 should be benign, and cluster 5 should be benign.
 
 ## K-Means Clustering (15 points)
 
 18. Perform k-means clustering on this dataset using the kmeans() function with K=2. Then use the table() function and the diagnosis label to compare the diagnostic composition (benign vs. malignant) of each of the 2 clusters (hint: the cluster information from k-means is stored in the $cluster attribute of the k-means result.)
 
+```{r}
+k_means <- kmeans(dat3 %>% subset(select = -c(diagnosis)), centers = 2)
+table(k_means$cluster, diag_only$diagnosis)
+```
+
+The first cluster should be labelled as malignant, and the second cluster should be labelled as benign.
+
 
 19. Visualize the clusters using the fviz_cluster() function from the factoextra package.
 
+```{r}
+fviz_cluster(k_means, data = dat3 %>% subset(select = -c(diagnosis)))
+```
+
 
 20. What is the benefit of hierarchical clustering over k-means based on the example problem we have just explored?
+
+With hierarchical , we don't have to specify the number of clusters and allow for the model to find the best number of clusters to fit the data.
