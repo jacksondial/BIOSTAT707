@@ -1,0 +1,139 @@
+---
+title: "HW3"
+author: "Jackson Dial"
+date: '2022-10-19'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(patchwork)
+library(gridExtra)
+library(psych)
+library(corrplot)
+library(ggfortify)
+library(factoextra)
+library(pander)
+library(tibble)
+```
+
+## Dataset
+Breast Cancer Prediction from Cytopathology Data
+https://www.kaggle.com/code/gpreda/breast-cancer-prediction-from-cytopathology-data/data
+
+
+## Data Preparation (30 points)
+1. Download the cancer data titled "Breast_Cytopatholgy.csv" from Sakai and import it into R. Look at the first 5 lines of the data to learn about the dataset. The “diagnosis” field shows whether the patient was diagnosed with a benign or malignant tumor. Please read additional information about each column online with the link above. 
+
+```{r, warning=FALSE, message=FALSE}
+dat0 <- read_csv("Data/Breast_Cytopathology.csv")
+head(dat0)
+```
+
+
+2. Answer the following questions by using the summary function or other methods of your choice:
+
+a. How many observations are there in total?
+b. How many independent variables are there?
+c. Is there any column with missing values? If yes, how many values are missing?
+d. How many observations are there with a malignant diagnosis and how many are there with a benign diagnosis?
+
+```{r}
+nrow(dat0)
+ncol(dat0)
+sum(is.na(dat0))
+summary(dat0)
+class(dat0$diagnosis)
+dat0$diagnosis <- as.factor(dat0$diagnosis)
+levels(dat0$diagnosis)
+table(dat0$diagnosis) %>% pander()
+
+```
+There are 569 observations in this dataset, and 31 (32 columns - 1 response variable) independent variables. The 'fractal_dimension_mean' variable has 6 NA values, and is the only column with any missing values. There are 357 observations with benign diagnosis, and 212 with malignant diagnosis.
+
+
+**For this question, please type your answers in full sentences outside of R chunks. Do not just show the output of running your code.**
+
+
+3. Change the "id" column into the index column (i.e. turn the ID values into row names) and delete the "id" column. Use str() to display the resulting dataframe. (5 points)
+ 
+ 
+ 
+```{r}
+dat1 <- dat0 %>% remove_rownames() %>% column_to_rownames(var = "id")
+
+```
+ 
+ 
+
+4. In this dataset, there isn't any column with a very large number of missing values. For the column(s) with some missing values, let’s impute these missing values by mean substitution. Keep in mind that if it is reasonable to assume that the observations with missing values could have different distributions and characteristics for the two different diagnosis groups, imputation must be performed separately for the two different diagnosis groups.
+
+```{r}
+#check if different imputaiton should be used
+dat1 %>% filter(is.na(dat1$fractal_dimension_mean) == TRUE) %>% select(diagnosis, fractal_dimension_mean)
+```
+
+
+5. After imputation, use "ggplot" and "facet_wrap" to plot a 10 x 3 grid of histograms to explore the data shape and distribution of all the independent variables in this dataset. The dataset has 10 sets of independent variables, and each set consists of the mean, standard error and worst value of a particular cell measurement. For example, "area_se" is the standard error of area measurements from a particular patient in this study. Remember to select a reasonable number of bins when plotting and add legends and labels when appropriate. Adjust the size of the plot display so that you can see all the facets clearly when you knit. 
+
+
+6. If you observe the independent variable distributions closely, groups of variables that start with "area", "compactness" and "concavity" are consistently strongly skewed to the right. Apply log transform using formula $log(x+1)$ to these 9 variables. 
+
+
+7. The pre-processed dataset needs to be scaled before performing PCA. Can you give a brief explanation as to why that is the case? Standardize the dataset. Use summary() again to show that your dataset has been properly standardized by checking the means and range of values of the variables.
+
+
+## PCA (25 points)
+
+8. Calculate the principal components using the function princomp() and print the summary of the results.
+
+
+9.  Plot a scree plot using the screeplot() function.
+
+
+10. Plot the following two plots and use patchwork/gridExtra to position the two plots side by side:
+a. proportion of variance explained by the number of principal components
+b. cumulative proportion of variance explained  by the number of principal components; draw horizontal lines at 88% of variance and 95% variance.
+
+Note: please remember to clearly label your plots with titles, axis labels and legends when appropriate.
+
+
+11. What proportions of variance are captured from the first, second and third principal components? How many principal components do you need to describe at least 88% and 95% of the variance, respectively?
+
+
+12. Which are the top 2 variables that contribute the most to the variance captured from PC1, PC2, and PC3 respectively? (hint: look at the loadings information)
+
+
+13. Plot a biplot using the biplot() function.
+
+
+14. Plot a 3 x 1 grid of scatter plots, where each plot is a scatter plot between two of the first 3 principal components, with different colors for each diagnosis group. For example, in grid cell (1,1), you should plot a scatter plot where the x-axis is PC1 and the y-axis is PC2, where red observations correspond to malignant diagnosis and blue observations correspond to the benign diagnosis. Remember to adjust the plot display size so that you can see clearly. Add legends and labels when appropriate. 
+
+
+
+## Hierarchical Clustering (15 points)
+
+15. Calculate a dissimilarity matrix using Euclidean distance. Compute hierarchical clustering using the complete linkage method and plot the dendrogram. Use the rect.hclust() function to display dividing the dendrogram into 4 branches. 
+
+
+16. Divide the dendrogram into 4 clusters using cutree() function. Then use the table() function and the diagnosis label to compare the diagnostic composition (benign vs. malignant) of each of the 4 clusters. If you had to choose diagnostic labels for each of the clusters, how would you label each(e.g. cluster 1 is benign or malignant, cluster 2 is …, etc.)?
+
+
+17. Now try 5 clusters with and plot dendrograms for hierarchical clustering using Ward’s linkage. Then use the table() function to view the clustering result. As in the previous question, how would you label each of these 5 clusters? 
+
+
+## K-Means Clustering (15 points)
+
+18. Perform k-means clustering on this dataset using the kmeans() function with K=2. Then use the table() function and the diagnosis label to compare the diagnostic composition (benign vs. malignant) of each of the 2 clusters (hint: the cluster information from k-means is stored in the $cluster attribute of the k-means result.)
+
+
+19. Visualize the clusters using the fviz_cluster() function from the factoextra package.
+
+
+20. What is the benefit of hierarchical clustering over k-means based on the example problem we have just explored?
