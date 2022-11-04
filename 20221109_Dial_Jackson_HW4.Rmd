@@ -1,0 +1,241 @@
+---
+title: "Homework 4"
+output: html_document
+---
+
+*In this homework, the objectives are to*
+
+1. Implement a k-Nearest Neighbors Classifier on a real world dataset
+
+2. Implement cross validation with k-Nearest Neighbors Classifier
+
+3. Implement a linear discriminant analysis classifier on a real world dataset
+
+4. Implement Ridge and LASSO Regressions
+
+Assignments will only be accepted in electronic format in RMarkdown (.rmd) files and knitted .html files. **5 points will be deducted for every assignment submission that does not include either the RMarkdown file or the knitted html file.** Your code should be adequately commented to clearly explain the steps you used to produce the analyses. RMarkdown homework files should be uploaded to Sakai with the naming convention date_lastname_firstname_HW[X].Rmd. For example, my first homework assignment would be named 20220830_Dunn_Jessilyn_HW1.Rmd. **It is important to note that 5 points will be deducted for every assignment that is named improperly.** Please add your answer to each question directly after the question prompt in  the homework .Rmd file template provided below.
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(patchwork)
+library(gridExtra)
+library(psych)
+library(corrplot)
+library(ggfortify)
+library(factoextra)
+library(class) #knn
+library(gmodels) # CrossTable()
+library(caret) # creatFolds()
+library(caTools) #sample.split()
+library(ROCR) # prediction(), performance()
+library(glmnet)
+set.seed(123)
+```
+
+## Dataset
+Diabetic retinopathy
+https://archive.ics.uci.edu/ml/datasets/Diabetic+Retinopathy+Debrecen+Data+Set
+
+**Terminologies: **
+
+Diabetic retinopathy:  is a diabetes complication that affects eyes. It's caused by damage to the blood vessels of the light-sensitive tissue at the back of the eye (retina). At first, diabetic retinopathy may cause no symptoms or only mild vision problems.
+
+Microaneurysms (MA): Microaneurysms are the earliest clinically visible changes of diabetic retinopathy. They are localised capillary dilatations which are usually saccular (round). They appear as small red dots which are often in clusters, but may occur in isolation.
+
+Exudate: a mass of cells and fluid that has seeped out of blood vessels or an organ, especially common as a result of inflammation.
+
+Macula: The macula is the central area of the retina and is of particular interest to retina specialists. Remember that the retina is the light sensitive tissue which lines the inside of the eye. The macula is the functional center of the retina. It gives us the ability to see “20/20” and provides the best color vision.
+
+Optic Disc: The optic disc or optic nerve head is the point of exit for ganglion cell axons leaving the eye. Because there are no rods or cones overlying the optic disc, it corresponds to a small blind spot in each eye. The ganglion cell axons form the optic nerve after they leave the eye.
+
+---
+
+## Data Visualization and Preprocessing (14 points)
+
+1. Load the CSV file titled "diabetic.csv" and print the first 5 rows using head() function. How many rows are there in the entire dataset?
+
+
+```{r ReadData, warning=FALSE, message=False}
+diabetic_df <- read_csv("Data/diabetic.csv")
+head(diabetic_df)
+nrow(diabetic_df)
+```
+There are 1151 rows in the entire dataset.
+
+2. The following are explanations of the columns included in this dataset:
+ 
+  - acceptable_quality: whether this observation has acceptable quality; 1 = acceptable; 0 = not acceptable
+
+  - ma_detection_0.5: detected macula area at 0.5 confidence
+
+  - ma_detection_1.0: detected macula area at 1.0 confidence
+
+  - exudates_0.5: detected exudates at 0.5 confidence, normalized by dividing the
+number of lesions with the diameter of the ROI to compensate different image
+sizes
+
+  - exudates_1.0: detected exudates at 1.0 confidence, normalized by dividing the
+number of lesions with the diameter of the ROI to compensate different image
+sizes
+ 
+  - macula_dist: the euclidean distance of the center of the macula and the center of the optic disc to provide important information regarding the patient's condition, normalized with the diameter of the ROI.
+  
+  - optic_disc_diameter: the diameter of the optic disc
+  
+  - label/dependent variable: 1 = contains signs of Diabetic Retinopathy (DR); 0 = no signs of DR
+
+Filter and save a new dataframe that contains only observations of acceptable quality and then delete the acceptable_quality column. How many rows are left? 
+
+```{r}
+levels(as.factor(diabetic_df$acceptable_quality))
+acceptable <- diabetic_df %>%
+  filter(acceptable_quality == 1) %>% 
+  subset(select = -c(acceptable_quality))
+acceptable %>% nrow()
+```
+
+There are 1147 rows left.
+
+3. Use scale() to standardize the independent variables in this dataset. Structure a new dataframe that has all the standardized independent variables as well as the binary label column. Hint: you can use the as_tibble() function to nicely format the standardized columns into a dataframe.
+
+```{r}
+
+```
+
+
+4. For simplicity, we will arbitrarily split our dataset into an 80:20 ratio for the training and testing datasets, respectively. Split your standardized dataset into two separate data frames – i.e. the first 80% of rows for training and the remaining 20% for testing. Name your dataframes appropriately (e.g. df_train and df_test). Then extract four new dataframes called X_train, X_test, which contain only the independent variables, and y_train, y_test, which contain only the labels.
+
+
+---
+
+## kNN (15 points)
+5. Generate a knn() model where k is the square root of the number of observations in the training set, which is a typical starting choice for k.
+- Learn its syntax from https://www.rdocumentation.org/packages/class/versions/7.3-
+15/topics/knn.
+- Note: Your training and test sets should only contain numeric values.
+- Note: The labels for the training dataset should be passed separately.
+- It should be clear to you that the output of this function is a list of the predicted values for the test set you passed.
+
+
+6. Create a confusion matrix of the prediction results using CrossTable().
+- Set prop.chisq = FALSE.
+- Learn its syntax from
+https://www.rdocumentation.org/packages/gmodels/versions/2.18.1/topics/CrossTable
+
+
+7. Calculate and print accuracy, sensitivity, error rate, and precision. You may choose either to use the information from the printed confusion matrix or to calculate using the equations from lecture slides. However, make sure you print and annotate them clearly for full credit.
+
+---
+
+# Cross Validation with kNN (10 points)
+
+8. In order to try k -fold cross validation, use createFolds() to divide our standardized dataset into 5 groups. Print how many items each of the 5 groups contain.
+- Note: There are two k values here that can have different values: one for kNN and the other for k-fold CV. We know this is confusing and wish that “k” was not the most common variable name for these methods!
+- Note: createFolds() function samples randomly. Include set.seed(123) before your
+createFolds() function so that you will reproduce the same results every time. For more information, see http://rfunction.com/archives/62. The number 123 is arbitrarily chosen for this homework.
+
+9. Train kNN models with k = 33 (here, k is referring to kNN) for each of the 5 CV groups, compute their error rates, and print the average of the 5 error rates.Compare the average error rate with the error rate calculated in question 7, what is your observation?
+
+---
+
+## Linear Discriminant Analysis (10 points)
+
+```{r eval=FALSE}
+library(MASS) # for LDA
+```
+
+10. Train a linear discriminant analysis model on the training dataset using the lda() function. 
+- For more information, please refer to https://www.rdocumentation.org/packages/MASS/versions/7.3-53/topics/lda
+
+
+11. Evaluate LDA by plotting the ROC curve using prediction() and performance() from the ROCR package. Calculate and print the area under the ROC curve using performance().Interpret the results and compare it with the kNN results, which one has better performance in making predictions and why?
+
+
+---
+
+# New Data Used Below
+
+Load the dataset titled "life_expectancy_dataset.csv". Attached on the Sakai page for this homework is an excel document explaining what the variables mean in this dataset. Print the first 5 rows of the imported dataset and take an initial glance at the structure of this data using the str() function. Mutate the dataframe so that there is a new column titled *developed* where integer 1 means that the country of this row is developed and 0 otherwise. Save a dataframe object with all columns except for *Country*, *Year*, and *Status*.   (2 points)
+
+
+12. Now use sample.split() from the "caTools" package to split the data into 80:20 = train:test sets (80% of the data will be used for training, and 20% will be used to test the model). Set the seed of the random number generator for the random assignment of each observation to either the train or test set  using set.seed(2022).  (3 points)
+
+
+We will use the glmnet() function from the glmnet package. Whereas all of the regression functions we have used so far, such as glm(), lm(), and regsubsets(), shared common syntax, glmnet() has a slightly different syntax. So to be able to use this function we will first pre-process our data. To do this, run the following lines of code to generate matrices of the testing and training datasets.
+
+```{r eval=FALSE}
+x.train <- model.matrix(Life.expectancy ~., train.set)
+y.train <- train.set$Life.expectancy
+x.test <- model.matrix(Life.expectancy ~., test.set)
+y.test <- test.set$Life.expectancy
+```
+
+## Ridge Regression (14 points)
+
+Ridge regression seeks coefficient estimates that fit the data well by minimizing the residual sum of squares (RSS). This regularization is done by adding an extra term (the penalty term) to the original cost function: $RSS + \lambda \sum_{j=1}^p \beta^2_j$. Selecting a good value for $\lambda$ is critical. We will first create an array of $\lambda$ values we will test out. 
+
+```{r eval=FALSE}
+lambdas <- 10^seq(12, -6, length = 300)
+```
+
+13. Build a ridge regression model using glmnet() using the training data and the labels that you built in question 12.
++ For glmnet syntax information, refer to: https://www.rdocumentation.org/packages/glmnet/versions/3.0- 2/topics/glmnet
++ Note: You need to set alpha = 0 to indicate you want to run ridge regression.
+
+
+
+14. The glmnet package has a built-in cross validation function. Use cv.glmnet() to run cross-validated on ridge regression so that you can choose the optimal value of lambda. What is the $\lambda$ value that gives rise to the ridge regression model with the minimal mean squared error (MSE), which we will define to be the best model for our purposes?
++ Note: Make sure you set.seed(2022)
++ Hint: accessing "lambda.min" outputs the value of $\lambda$ that gives the minimum mean cross-validated error.
++ For more information, see https://www.rdocumentation.org/packages/glmnet/versions/3.0-
+2/topics/cv.glmnet
++ Add a plot of the result from calling cv.glmnet(). What does this plot tell you?
+
+
+15. Use predict() from the glmnet package to test your model. Make sure you use the $\lambda$ derived from Question 15 and the test set. Calculate and print the mean squared error (MSE). 
++ For more information on the syntax, see
+https://www.rdocumentation.org/packages/glmnet/versions/1.1-1/topics/predict.glmnet
+
+
+
+16. Calculate and print the sum of squared residuals (or RSS) and the R-squared statistic for the test set, using the predicted values from the best ridge regression model. 
+
+
+---
+
+## LASSO (17 points)
+
+17. Like ridge regression, lasso also seeks coefficient estimates that fit the data well by minimizing the residual sum of squares (RSS). This regularization is done by adding an extra term to the original cost function: $RSS + \lambda \sum_{j=1}^p |\beta_j|$ Selecting a good value for $\lambda$ is critical for lasso as well. 
+
+First, build a lasso model using glmnet() using training data and labels from question 12.
+
++ For its syntax information: https://www.rdocumentation.org/packages/glmnet/versions/3.0-2/topics/glmnet
++ Note: You need to set alpha = 1 to indicate you want to run lasso.
++ Note: You should use the same lambdas array as you used previously
+
+
+18. Use cv.glmnet() to run cross validation on lasso and determine the lambda that minimizes the MSE (which we will consider here to mean the best performing model). What is the $\lambda$ value that gives rise to the best performing lasso model? 
++ Note: Make sure you set.seed(2022)
++ Hint: $lambda$.min outputs the value of $\lambda$ that gives the minimum mean cross-validated error (MSE).
++ For more information, see https://www.rdocumentation.org/packages/glmnet/versions/3.0-2/topics/cv.glmnet
++ Add a plot of the result from calling cv.glmnet(). What does this plot tell you?
+
+
+
+19. Use predict() from the glmnet package to test your model. Make sure you use the $\lambda$ derived from Question 17 and the test set. Calculate and print the test mean squared error (MSE). 
++ For more information on the syntax, see https://www.rdocumentation.org/packages/glmnet/versions/1.1-1/topics/predict.glmnet
+
+
+
+20. Calculate and print the sum of squared residuals (i.e. RSS) and the R-squared statistic for the test set, using the predicted values from the best lasso model.
+
+
+
+
+21. We have implemented and tested both Ridge and LASSO models to predict life expectancy. What are your conclusions? Which model worked better? Provide quantitative metrics to support your reasoning when applicable.
+
+
+
+
