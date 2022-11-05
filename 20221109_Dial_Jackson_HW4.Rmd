@@ -191,7 +191,46 @@ The precision is `r prec`
 - Note: createFolds() function samples randomly. Include set.seed(123) before your
 createFolds() function so that you will reproduce the same results every time. For more information, see http://rfunction.com/archives/62. The number 123 is arbitrarily chosen for this homework.
 
+```{r folds}
+set.seed(123)
+my_folds <- createFolds(acc_scale$label, k = 5)
+
+my_folds$Fold1 %>% length()
+my_folds$Fold2 %>% length()
+my_folds$Fold3 %>% length()
+my_folds$Fold4 %>% length()
+my_folds$Fold5 %>% length()
+```
+
+
 9. Train kNN models with k = 33 (here, k is referring to kNN) for each of the 5 CV groups, compute their error rates, and print the average of the 5 error rates.Compare the average error rate with the error rate calculated in question 7, what is your observation?
+
+```{r kfknn}
+errorRates <- vector()
+for (i in 1:5){
+  fold_num <- paste("Fold", i)
+  fold <- my_folds$Fold1
+  kf_test <- acc_scale %>% filter(id %in% fold)
+  kf_train <- anti_join(acc_scale, kf_test, by = "id")
+  
+  kf_x_train <- kf_train %>% subset(select = -c(label, id)) %>% as.matrix()
+  kf_x_test <- kf_test %>% subset(select = -c(label, id))
+  
+  kf_y_train <- kf_train %>% select(label) %>% as.matrix()
+  kf_y_test <- kf_test %>% select(label) %>% as.matrix()
+  
+  my_kf_k <- 33
+  my_kf_knn <- knn(train = kf_x_train, test = kf_x_test, cl = kf_y_train, k = my_kf_k)
+  
+  errorRates[i] <- mean(my_kf_knn != kf_y_test)
+}
+mean(errorRates)
+```
+
+The error rates are different, the averaged error rate is 0.41 and the error rate in question 7 is 0.35.
+
+__Check this__
+
 
 ---
 
