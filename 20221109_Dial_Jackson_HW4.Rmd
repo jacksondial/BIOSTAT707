@@ -88,7 +88,7 @@ sizes
 
 Filter and save a new dataframe that contains only observations of acceptable quality and then delete the acceptable_quality column. How many rows are left? 
 
-```{r}
+```{r acceptable}
 levels(as.factor(diabetic_df$acceptable_quality))
 acceptable <- diabetic_df %>%
   filter(acceptable_quality == 1) %>% 
@@ -100,7 +100,7 @@ There are 1147 rows left.
 
 3. Use scale() to standardize the independent variables in this dataset. Structure a new dataframe that has all the standardized independent variables as well as the binary label column. Hint: you can use the as_tibble() function to nicely format the standardized columns into a dataframe.
 
-```{r}
+```{r scale}
 acc_scale <- acceptable %>% 
   subset(select = -c(label)) %>% 
   scale() %>% 
@@ -111,7 +111,7 @@ acc_scale <- acceptable %>%
 
 4. For simplicity, we will arbitrarily split our dataset into an 80:20 ratio for the training and testing datasets, respectively. Split your standardized dataset into two separate data frames – i.e. the first 80% of rows for training and the remaining 20% for testing. Name your dataframes appropriately (e.g. df_train and df_test). Then extract four new dataframes called X_train, X_test, which contain only the independent variables, and y_train, y_test, which contain only the labels.
 
-```{r}
+```{r testTrainSplit}
 acc_scale$id <- 1:nrow(acc_scale)
 
 train <- acc_scale %>% dplyr::sample_frac(0.80)
@@ -134,17 +134,12 @@ y_test <- test %>% select(label) %>% as.matrix()
 - Note: The labels for the training dataset should be passed separately.
 - It should be clear to you that the output of this function is a list of the predicted values for the test set you passed.
 
-```{r}
+```{r knn}
 my_k <- round(sqrt(nrow(X_train)))
 my_knn <- knn(train = X_train, test = X_test, cl = y_train, k = my_k)
 
 my_knn # these are my predicted values for the test df
 ```
-```{r}
-my_knn %>% as.vector() %>% length()
-```
-
-
 
 6. Create a confusion matrix of the prediction results using CrossTable().
 - Set prop.chisq = FALSE.
@@ -152,20 +147,40 @@ my_knn %>% as.vector() %>% length()
 https://www.rdocumentation.org/packages/gmodels/versions/2.18.1/topics/CrossTable
 
 
-```{r}
+```{r crosstab1}
 my_crosstab <- CrossTable(x = y_test, y = my_knn, prop.chisq = FALSE)
 ```
-```{r}
+```{r crosstab2}
 my_crosstab
 ```
 
 
 7. Calculate and print accuracy, sensitivity, error rate, and precision. You may choose either to use the information from the printed confusion matrix or to calculate using the equations from lecture slides. However, make sure you print and annotate them clearly for full credit.
 
-```{r}
-accuracy <- 3
+```{r errorRate}
+errorRate <- mean(my_knn != y_test)
 ```
 
+```{r accuracy}
+accuracy = 1-errorRate
+```
+
+```{r sensitivity}
+conf_matrix<-table(my_knn,y_test)
+sens <- sensitivity(conf_matrix)
+```
+
+```{r specificity}
+prec <- precision(conf_matrix)
+```
+
+The accuracy is: `r accuracy`
+
+The sensitivity is `r sens`
+
+The error rate is `r errorRate`
+
+The precision is `r prec`
 
 ---
 
