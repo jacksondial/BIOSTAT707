@@ -59,7 +59,7 @@ Optic Disc: The optic disc or optic nerve head is the point of exit for ganglion
 1. Load the CSV file titled "diabetic.csv" and print the first 5 rows using head() function. How many rows are there in the entire dataset?
 
 
-```{r ReadData, warning=FALSE, message=False}
+```{r ReadData, warning=FALSE, message=FALSE}
 diabetic_df <- read_csv("Data/diabetic.csv")
 head(diabetic_df, 5)
 nrow(diabetic_df)
@@ -165,7 +165,7 @@ errorRate_7
 ```
 
 ```{r accuracy}
-accuracy = 1-errorRate
+accuracy = 1-errorRate_7
 ```
 
 ```{r sensitivity}
@@ -181,7 +181,7 @@ The accuracy is: `r accuracy`
 
 The sensitivity is `r sens`
 
-The error rate is `r errorRate`
+The error rate is `r errorRate_7`
 
 The precision is `r prec`
 
@@ -211,7 +211,7 @@ my_folds$Fold5 %>% length()
 ```{r kfknn}
 errorRates <- vector()
 for (i in 1:5){
-  fold <- my_folds[[i]] #need to make this fold_num somehow
+  fold <- my_folds[[i]] 
   kf_test <- acc_scale %>% filter(id %in% fold)
   kf_train <- anti_join(acc_scale, kf_test, by = "id")
   
@@ -232,14 +232,11 @@ mean_error_kf
 
 The error rates are different, the averaged error rate is `r mean_error_kf` and the error rate in question 7 is `r errorRate_7`.
 
-__Check this__
-
-
 ---
 
 ## Linear Discriminant Analysis (10 points)
 
-```{r eval=FALSE}
+```{r massLib}
 library(MASS) # for LDA
 ```
 
@@ -258,13 +255,19 @@ pred = predict(my_lda,test,type="response")
 pred2 = prediction(pred$x, test$label)
 perf = performance(pred2, "acc")
 plot(perf)
+
+perf
+auroc_obj <- performance(pred2, "auc")
+my_auc <- auroc_obj@y.values[[1]]
+my_auc
 ```
 
 ```{r ROCCurve}
 roc = performance(pred2,"tpr","fpr")
 plot(roc, colorize = T, lwd = 2)
-# abline(a = 0, b = 1)
 ```
+
+I would say that LDA here is better, because the area under the ROC curve calculated is `r my_auc` and the error rate for the knn is larger than 1 - AUC. Though they are not exact opposites of each other, they can be somewhat related to each other in this way.
 
 ---
 
@@ -298,7 +301,7 @@ test_q2 <- life2 %>% filter(my_splits == FALSE)
 
 We will use the glmnet() function from the glmnet package. Whereas all of the regression functions we have used so far, such as glm(), lm(), and regsubsets(), shared common syntax, glmnet() has a slightly different syntax. So to be able to use this function we will first pre-process our data. To do this, run the following lines of code to generate matrices of the testing and training datasets.
 
-```{r eval=FALSE}
+```{r training2}
 x.train <- model.matrix(Life.expectancy ~., train_q2)
 y.train <- train_q2$Life.expectancy
 x.test <- model.matrix(Life.expectancy ~., test_q2)
@@ -309,7 +312,7 @@ y.test <- test_q2$Life.expectancy
 
 Ridge regression seeks coefficient estimates that fit the data well by minimizing the residual sum of squares (RSS). This regularization is done by adding an extra term (the penalty term) to the original cost function: $RSS + \lambda \sum_{j=1}^p \beta^2_j$. Selecting a good value for $\lambda$ is critical. We will first create an array of $\lambda$ values we will test out. 
 
-```{r eval=FALSE}
+```{r lambdas}
 lambdas <- 10^seq(12, -6, length = 300)
 ```
 
@@ -331,14 +334,14 @@ ridge1
 2/topics/cv.glmnet
 + Add a plot of the result from calling cv.glmnet(). What does this plot tell you?
 
-```{r}
+```{r ridge_cv}
 set.seed(2022)
 ridge_cv <- cv.glmnet(x.train, y.train, alpha = 0)
 ridge_cv
 ```
 
 
-```{r}
+```{r plotRidge}
 ridge_cv$lambda.min
 plot(ridge_cv)
 ```
@@ -352,7 +355,7 @@ This plot tells me that the lowest value for $log(\lambda)$ is approximately bet
 + For more information on the syntax, see
 https://www.rdocumentation.org/packages/glmnet/versions/1.1-1/topics/predict.glmnet
 
-```{r}
+```{r predictRidge}
 glm_preds <- glmnet::predict.glmnet(ridge1, x.test, s = ridge_cv$lambda.min)
 my_mse <- mean((glm_preds - y.test)^2)
 my_mse
@@ -362,10 +365,11 @@ the MSE is `r my_mse`
 
 16. Calculate and print the sum of squared residuals (or RSS) and the R-squared statistic for the test set, using the predicted values from the best ridge regression model. 
 
-```{r}
+```{r RidgeRSQ}
 SSR <- sum((glm_preds - y.test)^2)
 SST <- sum((glm_preds - mean(y.test))^2)
 rsq <- SSR/SST
+SSR
 rsq
 ```
 
@@ -383,7 +387,7 @@ First, build a lasso model using glmnet() using training data and labels from qu
 + Note: You should use the same lambdas array as you used previously
 
 
-```{r}
+```{r lasso}
 lasso1 <- glmnet(x.train, y.train, alpha = 1, lambda = lambdas)
 lasso1
 ```
@@ -395,7 +399,7 @@ lasso1
 + For more information, see https://www.rdocumentation.org/packages/glmnet/versions/3.0-2/topics/cv.glmnet
 + Add a plot of the result from calling cv.glmnet(). What does this plot tell you?
 
-```{r}
+```{r lassoCV}
 set.seed(2022)
 lasso_cv <- cv.glmnet(x.train, y.train, alpha = 1)
 lasso_cv
@@ -406,7 +410,7 @@ lasso_cv
 19. Use predict() from the glmnet package to test your model. Make sure you use the $\lambda$ derived from Question 17 and the test set. Calculate and print the test mean squared error (MSE). 
 + For more information on the syntax, see https://www.rdocumentation.org/packages/glmnet/versions/1.1-1/topics/predict.glmnet
 
-```{r}
+```{r PredictLasso} 
 glm_preds2 <- glmnet::predict.glmnet(lasso1, x.test, s = lasso_cv$lambda.min)
 my_mse2 <- mean((glm_preds2 - y.test)^2)
 my_mse2
@@ -415,10 +419,11 @@ my_mse2
 
 20. Calculate and print the sum of squared residuals (i.e. RSS) and the R-squared statistic for the test set, using the predicted values from the best lasso model.
 
-```{r}
+```{r LassoRSQ}
 SSR2 <- sum((glm_preds2 - y.test)^2)
 SST2 <- sum((glm_preds2 - mean(y.test))^2)
 rsq2 <- SSR2/SST2
+SSR2
 rsq2
 ```
 
@@ -427,5 +432,5 @@ rsq2
 21. We have implemented and tested both Ridge and LASSO models to predict life expectancy. What are your conclusions? Which model worked better? Provide quantitative metrics to support your reasoning when applicable.
 
 
-Though the models have nearly identical evaluation metrics: Ridge $R^2 =$`r rsq` and $MSE =$ `r my_mse` while Lasso had values of: $R^2 =$ `r rsq2` and $MSE =$ `r my_mse2`, I would go with lasso, because lasso allows us to remove variables from the model thus simplifying the model.
+The models have similar evaluation metrics: Ridge $R^2 =$ `r rsq` and $MSE =$ `r my_mse` while Lasso had values of: $R^2 =$ `r rsq2` and $MSE =$ `r my_mse2`, though lasso allows us to remove variables from the model thus simplifying the model, the MSE in the ridge model is smaller than the MSE in the lasso model, while the $R^2$ values are nearly identical.
 
